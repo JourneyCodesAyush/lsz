@@ -1,0 +1,43 @@
+# Build artifacts
+*.o
+*.obj
+*.exe
+*.out
+*.a
+*.lib
+*.so
+*.dll
+
+# Build directories
+build/
+makeBuild/
+bin/
+out/
+
+# Make
+Makefile.user
+
+# Debug / profiling
+*.pdb
+*.dSYM/
+*.prof
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+
+# Temporary files
+*.tmp
+*.temp
+
+# Zig files
+.zig-cache/
+zig-out/
