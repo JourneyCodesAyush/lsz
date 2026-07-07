@@ -24,15 +24,19 @@ pub fn main(init: std.process.Init) !void {
     if (res.args.help != 0)
         return clap.helpToFile(init.io, .stderr(), clap.Help, &params, .{});
 
-    if (res.positionals.len == 0) {
+    const path_count: u64 = res.positionals[0].len;
+
+    if (path_count == 0) {
         try list.printDirectories(".", init.io);
+        return;
     }
 
     for (res.positionals[0]) |pos| {
         const stat = try std.Io.Dir.cwd().statFile(init.io, pos, .{});
         switch (stat.kind) {
             .directory => {
-                std.debug.print("\n\n{s}\n", .{pos});
+                if (path_count > 1)
+                    std.debug.print("\n\n{s}\n", .{pos});
                 try list.printDirectories(pos, init.io);
             },
             .file => std.debug.print("{s}\n", .{pos}),
