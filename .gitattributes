@@ -1,0 +1,15 @@
+# Normalize all text files to LF in repo
+* text=auto eol=lf
+
+# Binary files
+*.exe   binary
+*.dll   binary
+*.so    binary
+*.a     binary
+*.lib   binary
+*.o     binary
+*.obj   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
