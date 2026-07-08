@@ -1,7 +1,7 @@
 const std = @import("std");
 
 pub const OutputMode = enum { pipe, terminal };
-pub const Config = struct { all: bool, output_mode: OutputMode };
+pub const Config = struct { all: bool, output_mode: OutputMode, width: usize };
 
 const OwnedEntry = struct {
     name: []u8,
