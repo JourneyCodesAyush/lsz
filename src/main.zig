@@ -7,6 +7,12 @@ const list = @import("list.zig");
 const util = @import("utils.zig");
 const version = @import("build_zig_zon").version;
 
+const ExitCode = enum(u8) {
+    success = 0,
+    general_error = 1,
+    invalid_argument = 2,
+};
+
 pub fn main(init: std.process.Init) !void {
     const params = comptime clap.parseParamsComptime(
         \\-h, --help             Display this help and exit
@@ -24,7 +30,7 @@ pub fn main(init: std.process.Init) !void {
     }) catch |err| {
         // Report useful error and exit.
         try diag.reportToFile(init.io, .stderr(), err);
-        return err;
+        std.process.exit(@intFromEnum(ExitCode.invalid_argument));
     };
     defer res.deinit();
 
