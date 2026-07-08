@@ -5,10 +5,12 @@ const clap = @import("clap");
 const list = @import("list.zig");
 
 const util = @import("utils.zig");
+const version = @import("build_zig_zon").version;
 
 pub fn main(init: std.process.Init) !void {
     const params = comptime clap.parseParamsComptime(
         \\-h, --help             Display this help and exit
+        \\--version              Output version information and exit
         \\-a, --all              Do not ignore entries starting with .
         \\<str>...               Files or directories to list 
     );
@@ -32,6 +34,11 @@ pub fn main(init: std.process.Init) !void {
     defer stdout_writer.flush() catch {};
 
     const width = try util.getTerminalSize();
+
+    if (res.args.version != 0) {
+        try stdout_writer.print("lsz v{s}", .{version});
+        return;
+    }
 
     if (res.args.help != 0)
         // return clap.usageToFile(init.io, .stderr(), clap.Help, &params);
