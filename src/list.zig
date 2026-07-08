@@ -10,13 +10,15 @@ const OwnedEntry = struct {
 };
 
 pub const PrintDirectoryContents = struct {
+    writer: *std.Io.Writer,
     io: std.Io,
     allocator: std.mem.Allocator,
     entries: std.ArrayList(OwnedEntry),
     config: Config,
 
-    pub fn init(self: *PrintDirectoryContents, io: std.Io, allocator: std.mem.Allocator, config: Config) !void {
+    pub fn init(self: *PrintDirectoryContents, io: std.Io, writer: *std.Io.Writer, allocator: std.mem.Allocator, config: Config) !void {
         self.io = io;
+        self.writer = writer;
         self.allocator = allocator;
         self.entries = .empty;
         self.config = config;
@@ -51,7 +53,7 @@ pub const PrintDirectoryContents = struct {
             try self.entries.append(self.allocator, owned_entry);
         }
         // std.debug.print("\n", .{});
-        self.printEntries();
+        try self.printEntries();
     }
 
     fn isHidden(name: []const u8) bool {
@@ -62,7 +64,7 @@ pub const PrintDirectoryContents = struct {
         return std.mem.order(u8, a.name, b.name) == .lt;
     }
 
-    fn printEntries(self: *PrintDirectoryContents) void {
+    fn printEntries(self: *PrintDirectoryContents) !void {
         std.mem.sort(
             OwnedEntry,
             self.entries.items,
@@ -74,10 +76,14 @@ pub const PrintDirectoryContents = struct {
             if (!self.config.all and isHidden(entry.name)) {
                 continue;
             }
-            std.debug.print("{s}", .{entry.name});
+            try self.writer.print("{s}", .{entry.name});
             switch (self.config.output_mode) {
-                .terminal => std.debug.print("\t", .{}),
-                .pipe => std.debug.print("\n", .{}),
+                .terminal => {
+                    try self.writer.print("\t", .{});
+                },
+                .pipe => {
+                    try self.writer.print("\n", .{});
+                },
             }
         }
     }
