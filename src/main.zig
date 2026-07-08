@@ -35,7 +35,7 @@ pub fn main(init: std.process.Init) !void {
     var printDirectory: list.PrintDirectoryContents = undefined;
     defer printDirectory.deinit();
 
-    try printDirectory.init(init.io, @constCast(&allocator), config);
+    try printDirectory.init(init.io, allocator, config);
 
     if (path_count == 0) {
         try printDirectory.printDirectories(".");

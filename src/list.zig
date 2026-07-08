@@ -10,11 +10,11 @@ const OwnedEntry = struct {
 
 pub const PrintDirectoryContents = struct {
     io: std.Io,
-    allocator: *std.mem.Allocator,
+    allocator: std.mem.Allocator,
     entries: std.ArrayList(OwnedEntry),
     config: Config,
 
-    pub fn init(self: *PrintDirectoryContents, io: std.Io, allocator: *std.mem.Allocator, config: Config) !void {
+    pub fn init(self: *PrintDirectoryContents, io: std.Io, allocator: std.mem.Allocator, config: Config) !void {
         self.io = io;
         self.allocator = allocator;
         self.entries = .empty;
@@ -25,7 +25,7 @@ pub const PrintDirectoryContents = struct {
         for (self.entries.items) |entry| {
             self.allocator.free(entry.name);
         }
-        self.entries.deinit(self.allocator.*);
+        self.entries.deinit(self.allocator);
     }
 
     pub fn printDirectories(self: *PrintDirectoryContents, root: []const u8) !void {
@@ -42,12 +42,12 @@ pub const PrintDirectoryContents = struct {
             // std.debug.print("{s}\n", .{entry.name});
 
             const owned_entry: OwnedEntry = .{
-                .name = try self.allocator.*.dupe(u8, entry.name),
+                .name = try self.allocator.dupe(u8, entry.name),
                 .kind = entry.kind,
                 .inode = entry.inode,
             };
 
-            try self.entries.append(self.allocator.*, owned_entry);
+            try self.entries.append(self.allocator, owned_entry);
         }
         // std.debug.print("\n", .{});
         self.printEntries();
