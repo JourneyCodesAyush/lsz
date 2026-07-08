@@ -10,6 +10,8 @@ pub fn main(init: std.process.Init) !void {
         \\<str>...               Files or directories to list 
     );
 
+    const allocator = init.arena.allocator();
+
     var diag = clap.Diagnostic{};
     var res = clap.parse(clap.Help, &params, clap.parsers.default, init.minimal.args, .{
         .diagnostic = &diag,
@@ -26,8 +28,13 @@ pub fn main(init: std.process.Init) !void {
 
     const path_count: u64 = res.positionals[0].len;
 
+    var printDirectory: list.PrintDirectoryContents = undefined;
+    defer printDirectory.deinit();
+
+    try printDirectory.init(init.io, @constCast(&allocator));
+
     if (path_count == 0) {
-        try list.printDirectories(".", init.io);
+        try printDirectory.printDirectories(".");
         return;
     }
 
@@ -37,7 +44,7 @@ pub fn main(init: std.process.Init) !void {
             .directory => {
                 if (path_count > 1)
                     std.debug.print("\n\n{s}\n", .{pos});
-                try list.printDirectories(pos, init.io);
+                try printDirectory.printDirectories(pos);
             },
             .file => std.debug.print("{s}\n", .{pos}),
             else => std.debug.print("{s}\n", .{pos}),
