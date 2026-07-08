@@ -53,6 +53,10 @@ pub const PrintDirectoryContents = struct {
         self.printEntries();
     }
 
+    fn isHidden(name: []const u8) bool {
+        return std.mem.startsWith(u8, name, ".");
+    }
+
     fn comparatorFn(_: @TypeOf(.{}), a: OwnedEntry, b: OwnedEntry) bool {
         return std.mem.order(u8, a.name, b.name) == .lt;
     }
@@ -66,13 +70,10 @@ pub const PrintDirectoryContents = struct {
         );
 
         for (self.entries.items) |entry| {
-            if (self.config.all == true) {
-                std.debug.print("{s}\n", .{entry.name});
-            } else {
-                if (std.mem.startsWith(u8, entry.name, "."))
-                    continue;
-                std.debug.print("{s}\n", .{entry.name});
+            if (!self.config.all and isHidden(entry.name)) {
+                continue;
             }
+            std.debug.print("{s}\n", .{entry.name});
         }
     }
 };
