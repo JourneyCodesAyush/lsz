@@ -1,6 +1,7 @@
 const std = @import("std");
 
-pub const Config = struct { all: bool };
+pub const OutputMode = enum { pipe, terminal };
+pub const Config = struct { all: bool, output_mode: OutputMode };
 
 const OwnedEntry = struct {
     name: []u8,
@@ -73,7 +74,11 @@ pub const PrintDirectoryContents = struct {
             if (!self.config.all and isHidden(entry.name)) {
                 continue;
             }
-            std.debug.print("{s}\n", .{entry.name});
+            std.debug.print("{s}", .{entry.name});
+            switch (self.config.output_mode) {
+                .terminal => std.debug.print("\t", .{}),
+                .pipe => std.debug.print("\n", .{}),
+            }
         }
     }
 };
