@@ -4,6 +4,8 @@ const Io = std.Io;
 const clap = @import("clap");
 const list = @import("list.zig");
 
+const util = @import("utils.zig");
+
 pub fn main(init: std.process.Init) !void {
     const params = comptime clap.parseParamsComptime(
         \\-h, --help             Display this help and exit
@@ -29,6 +31,8 @@ pub fn main(init: std.process.Init) !void {
     const stdout_writer = &stdout_file_writer.interface;
     defer stdout_writer.flush() catch {};
 
+    const width = try util.getTerminalSize();
+
     if (res.args.help != 0)
         // return clap.usageToFile(init.io, .stderr(), clap.Help, &params);
         return clap.helpToFile(init.io, .stderr(), clap.Help, &params, .{});
@@ -38,6 +42,7 @@ pub fn main(init: std.process.Init) !void {
     const config: list.Config = list.Config{
         .all = res.args.all != 0,
         .output_mode = if (is_terminal) list.OutputMode.terminal else list.OutputMode.pipe,
+        .width = width,
     };
 
     const path_count: u64 = res.positionals[0].len;
