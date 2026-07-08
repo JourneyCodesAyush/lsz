@@ -28,7 +28,12 @@ pub fn main(init: std.process.Init) !void {
         // return clap.usageToFile(init.io, .stderr(), clap.Help, &params);
         return clap.helpToFile(init.io, .stderr(), clap.Help, &params, .{});
 
-    const config: list.Config = list.Config{ .all = res.args.all != 0 };
+    const is_terminal: bool = try std.Io.File.isTty(.stdout(), init.io);
+
+    const config: list.Config = list.Config{
+        .all = res.args.all != 0,
+        .output_mode = if (is_terminal) list.OutputMode.terminal else list.OutputMode.pipe,
+    };
 
     const path_count: u64 = res.positionals[0].len;
 
