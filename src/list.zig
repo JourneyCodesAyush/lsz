@@ -64,6 +64,16 @@ pub const PrintDirectoryContents = struct {
         return std.mem.order(u8, a.name, b.name) == .lt;
     }
 
+    fn columnWidth(entries: []const OwnedEntry) usize {
+        var max_word_length: usize = 0;
+        for (entries) |entry| {
+            if (max_word_length < entry.name.len)
+                max_word_length = entry.name.len;
+        }
+
+        return max_word_length + 3;
+    }
+
     fn printEntries(self: *PrintDirectoryContents) !void {
         std.mem.sort(
             OwnedEntry,
@@ -72,14 +82,26 @@ pub const PrintDirectoryContents = struct {
             comparatorFn,
         );
 
+        const column_width: usize = columnWidth(self.entries.items);
+        const words_in_a_row: usize = @max(1, self.config.width / column_width);
+
+        var words: usize = 0;
         for (self.entries.items) |entry| {
             if (!self.config.all and isHidden(entry.name)) {
                 continue;
             }
+            if (words >= words_in_a_row) {
+                try self.writer.print("\n", .{});
+                words = 0;
+            }
+
             try self.writer.print("{s}", .{entry.name});
+
             switch (self.config.output_mode) {
                 .terminal => {
-                    try self.writer.print("\t", .{});
+                    words += 1;
+                    const padding: usize = column_width - entry.name.len;
+                    for (0..padding) |_| try self.writer.writeByte(' ');
                 },
                 .pipe => {
                     try self.writer.print("\n", .{});
