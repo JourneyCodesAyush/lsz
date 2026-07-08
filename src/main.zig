@@ -24,6 +24,11 @@ pub fn main(init: std.process.Init) !void {
     };
     defer res.deinit();
 
+    var stdout_buffer: [1024]u8 = undefined;
+    var stdout_file_writer: Io.File.Writer = .init(.stdout(), init.io, &stdout_buffer);
+    const stdout_writer = &stdout_file_writer.interface;
+    defer stdout_writer.flush() catch {};
+
     if (res.args.help != 0)
         // return clap.usageToFile(init.io, .stderr(), clap.Help, &params);
         return clap.helpToFile(init.io, .stderr(), clap.Help, &params, .{});
@@ -40,7 +45,7 @@ pub fn main(init: std.process.Init) !void {
     var printDirectory: list.PrintDirectoryContents = undefined;
     defer printDirectory.deinit();
 
-    try printDirectory.init(init.io, allocator, config);
+    try printDirectory.init(init.io, stdout_writer, allocator, config);
 
     if (path_count == 0) {
         try printDirectory.printDirectories(".");
@@ -52,11 +57,11 @@ pub fn main(init: std.process.Init) !void {
         switch (stat.kind) {
             .directory => {
                 if (path_count > 1)
-                    std.debug.print("\n\n{s}\n", .{pos});
+                    try stdout_writer.print("\n\n{s}\n", .{pos});
                 try printDirectory.printDirectories(pos);
             },
-            .file => std.debug.print("{s}\n", .{pos}),
-            else => std.debug.print("{s}\n", .{pos}),
+            .file => try stdout_writer.print("{s}\n", .{pos}),
+            else => try stdout_writer.print("{s}\n", .{pos}),
         }
     }
 }
