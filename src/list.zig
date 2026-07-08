@@ -1,5 +1,7 @@
 const std = @import("std");
 
+pub const Config = struct { all: bool };
+
 const OwnedEntry = struct {
     name: []u8,
     kind: std.Io.File.Kind,
@@ -10,11 +12,13 @@ pub const PrintDirectoryContents = struct {
     io: std.Io,
     allocator: *std.mem.Allocator,
     entries: std.ArrayList(OwnedEntry),
+    config: Config,
 
-    pub fn init(self: *PrintDirectoryContents, io: std.Io, allocator: *std.mem.Allocator) !void {
+    pub fn init(self: *PrintDirectoryContents, io: std.Io, allocator: *std.mem.Allocator, config: Config) !void {
         self.io = io;
         self.allocator = allocator;
         self.entries = .empty;
+        self.config = config;
     }
 
     pub fn deinit(self: *PrintDirectoryContents) void {
@@ -62,7 +66,13 @@ pub const PrintDirectoryContents = struct {
         );
 
         for (self.entries.items) |entry| {
-            std.debug.print("{s}\n", .{entry.name});
+            if (self.config.all == true) {
+                std.debug.print("{s}\n", .{entry.name});
+            } else {
+                if (std.mem.startsWith(u8, entry.name, "."))
+                    continue;
+                std.debug.print("{s}\n", .{entry.name});
+            }
         }
     }
 };
