@@ -83,6 +83,11 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    const zon_module = b.createModule(.{
+        .root_source_file = b.path("build.zig.zon"),
+    });
+    exe.root_module.addImport("build_zig_zon", zon_module);
+
     const clap = b.dependency("clap", .{});
     exe.root_module.addImport("clap", clap.module("clap"));
 
