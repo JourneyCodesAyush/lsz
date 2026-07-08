@@ -64,7 +64,7 @@ pub const PrintDirectoryContents = struct {
         return std.mem.order(u8, a.name, b.name) == .lt;
     }
 
-    fn columnWidth(entries: []const OwnedEntry) usize {
+    fn columnWidth(entries: []const *const OwnedEntry) usize {
         var max_word_length: usize = 0;
         for (entries) |entry| {
             if (max_word_length < entry.name.len)
@@ -82,31 +82,40 @@ pub const PrintDirectoryContents = struct {
             comparatorFn,
         );
 
-        const column_width: usize = columnWidth(self.entries.items);
-        const words_in_a_row: usize = @max(1, self.config.width / column_width);
+        var visible: std.ArrayList(*const OwnedEntry) = .empty;
+        defer visible.deinit(self.allocator);
 
-        var words: usize = 0;
-        for (self.entries.items) |entry| {
-            if (!self.config.all and isHidden(entry.name)) {
+        for (self.entries.items) |*entry| {
+            if (!self.config.all and isHidden(entry.name))
                 continue;
+            try visible.append(self.allocator, entry);
+        }
+
+        if (self.config.output_mode == .pipe) {
+            for (visible.items) |entry| {
+                try self.writer.print("{s}\n", .{entry.name});
             }
-            if (words >= words_in_a_row) {
-                try self.writer.print("\n", .{});
-                words = 0;
+            return;
+        }
+
+        const column_width: usize = columnWidth(visible.items);
+        const num_columns: usize = @max(1, self.config.width / column_width);
+        const num_rows: usize = (visible.items.len + num_columns - 1) / num_columns;
+
+        for (0..num_rows) |row| {
+            for (0..num_columns) |col| {
+                const i = col * num_rows + row;
+                if (i >= visible.items.len)
+                    continue;
+
+                const entry = visible.items[i];
+                try self.writer.print("{s}", .{entry.name});
+
+                const padding = column_width - entry.name.len;
+                for (0..padding) |_| try self.writer.writeByte(' ');
             }
 
-            try self.writer.print("{s}", .{entry.name});
-
-            switch (self.config.output_mode) {
-                .terminal => {
-                    words += 1;
-                    const padding: usize = column_width - entry.name.len;
-                    for (0..padding) |_| try self.writer.writeByte(' ');
-                },
-                .pipe => {
-                    try self.writer.print("\n", .{});
-                },
-            }
+            try self.writer.print("\n", .{});
         }
     }
 };
