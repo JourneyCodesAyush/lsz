@@ -71,7 +71,20 @@ pub fn main(init: std.process.Init) !void {
     }
 
     for (res.positionals[0]) |pos| {
-        const stat = try Io.Dir.cwd().statFile(init.io, pos, .{});
+        printDirectory.clear();
+        const stat = Io.Dir.cwd().statFile(init.io, pos, .{}) catch |err| {
+            switch (err) {
+                error.FileNotFound => {
+                    try stdout_writer.print("'{s}' does not exist\n", .{pos});
+                    continue;
+                },
+                error.AccessDenied => {
+                    try stdout_writer.print("'{s}': access denied\n", .{pos});
+                    continue;
+                },
+                else => return err,
+            }
+        };
         switch (stat.kind) {
             .directory => {
                 if (path_count > 1)
