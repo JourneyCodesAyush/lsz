@@ -50,7 +50,7 @@ pub fn main(init: std.process.Init) !void {
         // return clap.usageToFile(init.io, .stderr(), clap.Help, &params);
         return clap.helpToFile(init.io, .stderr(), clap.Help, &params, .{});
 
-    const is_terminal: bool = try std.Io.File.isTty(.stdout(), init.io);
+    const is_terminal: bool = try Io.File.isTty(.stdout(), init.io);
 
     const config: list.Config = list.Config{
         .all = res.args.all != 0,
@@ -71,7 +71,7 @@ pub fn main(init: std.process.Init) !void {
     }
 
     for (res.positionals[0]) |pos| {
-        const stat = try std.Io.Dir.cwd().statFile(init.io, pos, .{});
+        const stat = try Io.Dir.cwd().statFile(init.io, pos, .{});
         switch (stat.kind) {
             .directory => {
                 if (path_count > 1)
