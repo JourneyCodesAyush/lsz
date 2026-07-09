@@ -34,6 +34,14 @@ pub const PrintDirectoryContents = struct {
         self.visible.deinit(self.allocator);
     }
 
+    pub fn clear(self: *PrintDirectoryContents) void {
+        for (self.entries.items) |entry| {
+            self.allocator.free(entry.name);
+        }
+        self.entries.clearRetainingCapacity();
+        self.visible.clearRetainingCapacity();
+    }
+
     pub fn printDirectories(self: *PrintDirectoryContents, root: []const u8) !void {
         var dir: std.Io.Dir = try std.Io.Dir.cwd().openDir(self.io, root, .{ .iterate = true });
         defer dir.close(self.io);
