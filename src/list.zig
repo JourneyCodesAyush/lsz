@@ -14,6 +14,7 @@ pub const PrintDirectoryContents = struct {
     io: std.Io,
     allocator: std.mem.Allocator,
     entries: std.ArrayList(OwnedEntry),
+    visible: std.ArrayList(*const OwnedEntry),
     config: Config,
 
     pub fn init(self: *PrintDirectoryContents, io: std.Io, writer: *std.Io.Writer, allocator: std.mem.Allocator, config: Config) !void {
@@ -21,6 +22,7 @@ pub const PrintDirectoryContents = struct {
         self.writer = writer;
         self.allocator = allocator;
         self.entries = .empty;
+        self.visible = .empty;
         self.config = config;
     }
 
@@ -29,6 +31,7 @@ pub const PrintDirectoryContents = struct {
             self.allocator.free(entry.name);
         }
         self.entries.deinit(self.allocator);
+        self.visible.deinit(self.allocator);
     }
 
     pub fn printDirectories(self: *PrintDirectoryContents, root: []const u8) !void {
@@ -53,7 +56,16 @@ pub const PrintDirectoryContents = struct {
             try self.entries.append(self.allocator, owned_entry);
         }
         // std.debug.print("\n", .{});
+        try self.extractVisible();
         try self.printEntries();
+    }
+
+    pub fn extractVisible(self: *PrintDirectoryContents) !void {
+        for (self.entries.items) |*entry| {
+            if (!self.config.all and isHidden(entry.name))
+                continue;
+            try self.visible.append(self.allocator, entry);
+        }
     }
 
     fn isHidden(name: []const u8) bool {
@@ -82,33 +94,24 @@ pub const PrintDirectoryContents = struct {
             comparatorFn,
         );
 
-        var visible: std.ArrayList(*const OwnedEntry) = .empty;
-        defer visible.deinit(self.allocator);
-
-        for (self.entries.items) |*entry| {
-            if (!self.config.all and isHidden(entry.name))
-                continue;
-            try visible.append(self.allocator, entry);
-        }
-
         if (self.config.output_mode == .pipe) {
-            for (visible.items) |entry| {
+            for (self.visible.items) |entry| {
                 try self.writer.print("{s}\n", .{entry.name});
             }
             return;
         }
 
-        const column_width: usize = columnWidth(visible.items);
+        const column_width: usize = columnWidth(self.visible.items);
         const num_columns: usize = @max(1, self.config.width / column_width);
-        const num_rows: usize = (visible.items.len + num_columns - 1) / num_columns;
+        const num_rows: usize = (self.visible.items.len + num_columns - 1) / num_columns;
 
         for (0..num_rows) |row| {
             for (0..num_columns) |col| {
                 const i = col * num_rows + row;
-                if (i >= visible.items.len)
+                if (i >= self.visible.items.len)
                     continue;
 
-                const entry = visible.items[i];
+                const entry = self.visible.items[i];
                 try self.writer.print("{s}", .{entry.name});
 
                 const padding = column_width - entry.name.len;
