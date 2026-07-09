@@ -70,16 +70,17 @@ pub fn main(init: std.process.Init) !void {
         return;
     }
 
+    var printed_any: bool = false;
     for (res.positionals[0]) |pos| {
         printDirectory.clear();
         const stat = Io.Dir.cwd().statFile(init.io, pos, .{}) catch |err| {
             switch (err) {
                 error.FileNotFound => {
-                    try stdout_writer.print("'{s}' does not exist\n", .{pos});
+                    try stdout_writer.print("lsz: '{s}' does not exist\n", .{pos});
                     continue;
                 },
                 error.AccessDenied => {
-                    try stdout_writer.print("'{s}': access denied\n", .{pos});
+                    try stdout_writer.print("lsz: '{s}': access denied\n", .{pos});
                     continue;
                 },
                 else => return err,
@@ -87,12 +88,21 @@ pub fn main(init: std.process.Init) !void {
         };
         switch (stat.kind) {
             .directory => {
-                if (path_count > 1)
-                    try stdout_writer.print("\n\n{s}\n", .{pos});
+                if (path_count > 1) {
+                    if (printed_any) try stdout_writer.print("\n", .{});
+                    try stdout_writer.print("{s}:\n", .{pos});
+                }
                 try printDirectory.printDirectories(pos);
+                printed_any = true;
             },
-            .file => try stdout_writer.print("{s}\n", .{pos}),
-            else => try stdout_writer.print("{s}\n", .{pos}),
+            .file => {
+                try stdout_writer.print("{s}\n", .{pos});
+                printed_any = true;
+            },
+            else => {
+                try stdout_writer.print("{s}\n", .{pos});
+                printed_any = true;
+            },
         }
     }
 }
