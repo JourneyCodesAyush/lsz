@@ -7,7 +7,7 @@
 ![Zig](https://img.shields.io/badge/Zig-0.16.0-orange)
 ![Version](https://img.shields.io/github/v/tag/JourneyCodesAyush/lsz?label=latest&color=purple)
 
-[`ls`](https://man7.org/linux/man-pages/man1/ls.1.html) in Zig — built from scratch to to calm the itch to build something.
+[`ls`](https://man7.org/linux/man-pages/man1/ls.1.html) in Zig — built from scratch to scratch an itch.
 
 ## Features
 
