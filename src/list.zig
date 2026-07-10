@@ -1,7 +1,8 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 pub const OutputMode = enum { pipe, terminal };
-pub const Config = struct { all: bool, output_mode: OutputMode, width: usize };
+pub const Config = struct { all: bool, long: bool, output_mode: OutputMode, width: usize };
 
 const OwnedEntry = struct {
     name: []u8,
@@ -16,6 +17,7 @@ pub const PrintDirectoryContents = struct {
     entries: std.ArrayList(OwnedEntry),
     visible: std.ArrayList(*const OwnedEntry),
     config: Config,
+    root: []u8,
 
     pub fn init(self: *PrintDirectoryContents, io: std.Io, writer: *std.Io.Writer, allocator: std.mem.Allocator, config: Config) !void {
         self.io = io;
@@ -24,6 +26,7 @@ pub const PrintDirectoryContents = struct {
         self.entries = .empty;
         self.visible = .empty;
         self.config = config;
+        self.root = try self.allocator.dupe(u8, "");
     }
 
     pub fn deinit(self: *PrintDirectoryContents) void {
@@ -40,9 +43,11 @@ pub const PrintDirectoryContents = struct {
         }
         self.entries.clearRetainingCapacity();
         self.visible.clearRetainingCapacity();
+        self.allocator.free(self.root);
     }
 
     pub fn printDirectories(self: *PrintDirectoryContents, root: []const u8) !void {
+        self.root = try self.allocator.dupe(u8, root);
         var dir: std.Io.Dir = try std.Io.Dir.cwd().openDir(self.io, root, .{ .iterate = true });
         defer dir.close(self.io);
 
@@ -66,7 +71,11 @@ pub const PrintDirectoryContents = struct {
         // std.debug.print("\n", .{});
         self.sortEntries();
         try self.extractVisible();
-        try self.printEntries();
+        if (self.config.long) {
+            try self.printEntriesLong();
+        } else {
+            try self.printEntries();
+        }
     }
 
     fn sortEntries(self: *PrintDirectoryContents) void {
@@ -82,6 +91,48 @@ pub const PrintDirectoryContents = struct {
             if (!self.config.all and isHidden(entry.name))
                 continue;
             try self.visible.append(self.allocator, entry);
+        }
+    }
+
+    fn formatPermissions(self: *PrintDirectoryContents, entry: *const OwnedEntry, stat: std.Io.File.Stat) !void {
+        try self.writer.writeByte(switch (entry.kind) {
+            .directory => 'd',
+            .sym_link => 'l',
+            else => '-',
+        });
+
+        if (builtin.os.tag == .windows) {
+            try self.writer.writeAll("---------");
+            return;
+        }
+        if (std.posix.mode_t == u0) {
+            try self.writer.writeAll("---------");
+            return;
+        }
+
+        const mode = stat.permissions.toMode();
+
+        const perms = [_]struct { bit: u32, ch: u8 }{
+            .{ .bit = 0o400, .ch = 'r' }, .{ .bit = 0o200, .ch = 'w' }, .{ .bit = 0o100, .ch = 'x' },
+            .{ .bit = 0o040, .ch = 'r' }, .{ .bit = 0o020, .ch = 'w' }, .{ .bit = 0o010, .ch = 'x' },
+            .{ .bit = 0o004, .ch = 'r' }, .{ .bit = 0o002, .ch = 'w' }, .{ .bit = 0o001, .ch = 'x' },
+        };
+
+        for (perms) |p| {
+            try self.writer.print("{c}", .{if (mode & p.bit != 0) p.ch else '-'});
+        }
+    }
+
+    fn printEntriesLong(self: *PrintDirectoryContents) !void {
+        var dir = try std.Io.Dir.cwd().openDir(self.io, self.root, .{ .iterate = true });
+        defer dir.close(self.io);
+
+        for (self.visible.items) |entry| {
+            const stat = try std.Io.Dir.statFile(dir, self.io, entry.name, .{});
+            try self.formatPermissions(entry, stat);
+            try self.writer.writeByte(' ');
+            try self.writer.writeAll(entry.name);
+            try self.writer.writeByte('\n');
         }
     }
 
