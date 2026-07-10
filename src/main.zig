@@ -72,7 +72,6 @@ pub fn main(init: std.process.Init) !void {
 
     var printed_any: bool = false;
     for (res.positionals[0]) |pos| {
-        printDirectory.clear();
         const stat = Io.Dir.cwd().statFile(init.io, pos, .{}) catch |err| {
             switch (err) {
                 error.FileNotFound => {
@@ -91,6 +90,7 @@ pub fn main(init: std.process.Init) !void {
                 if (path_count > 1) {
                     if (printed_any) try stdout_writer.print("\n", .{});
                     try stdout_writer.print("{s}:\n", .{pos});
+                    printDirectory.clear();
                 }
                 try printDirectory.printDirectories(pos);
                 printed_any = true;
