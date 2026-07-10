@@ -40,7 +40,8 @@ pub fn main(init: std.process.Init) !void {
     const stdout_writer = &stdout_file_writer.interface;
     defer stdout_writer.flush() catch {};
 
-    const width = try util.getTerminalSize();
+    const stdout_file = std.Io.File.stdout();
+    const width = try util.getTerminalSize(stdout_file.handle);
 
     if (res.args.version != 0) {
         try stdout_writer.print("lsz v{s}", .{version});
