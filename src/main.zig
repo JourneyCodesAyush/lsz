@@ -18,6 +18,7 @@ pub fn main(init: std.process.Init) !void {
         \\-h, --help             Display this help and exit
         \\--version              Output version information and exit
         \\-a, --all              Do not ignore entries starting with .
+        \\-l, --long             Use long listing format
         \\<str>...               Files or directories to list 
     );
 
@@ -56,6 +57,7 @@ pub fn main(init: std.process.Init) !void {
         .all = res.args.all != 0,
         .output_mode = if (is_terminal) list.OutputMode.terminal else list.OutputMode.pipe,
         .width = width,
+        .long = res.args.long != 0,
     };
 
     const path_count: u64 = res.positionals[0].len;
