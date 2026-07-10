@@ -64,10 +64,19 @@ pub const PrintDirectoryContents = struct {
             try self.entries.append(self.allocator, owned_entry);
         }
         // std.debug.print("\n", .{});
+        self.sortEntries();
         try self.extractVisible();
         try self.printEntries();
     }
 
+    fn sortEntries(self: *PrintDirectoryContents) void {
+        std.mem.sort(
+            OwnedEntry,
+            self.entries.items,
+            .{},
+            comparatorFn,
+        );
+    }
     pub fn extractVisible(self: *PrintDirectoryContents) !void {
         for (self.entries.items) |*entry| {
             if (!self.config.all and isHidden(entry.name))
@@ -95,13 +104,6 @@ pub const PrintDirectoryContents = struct {
     }
 
     fn printEntries(self: *PrintDirectoryContents) !void {
-        std.mem.sort(
-            OwnedEntry,
-            self.entries.items,
-            .{},
-            comparatorFn,
-        );
-
         if (self.config.output_mode == .pipe) {
             for (self.visible.items) |entry| {
                 try self.writer.print("{s}\n", .{entry.name});
