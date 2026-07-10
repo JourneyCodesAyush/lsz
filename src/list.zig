@@ -51,15 +51,9 @@ pub const PrintDirectoryContents = struct {
         var dir: std.Io.Dir = try std.Io.Dir.cwd().openDir(self.io, root, .{ .iterate = true });
         defer dir.close(self.io);
 
-        // const stats = try dir.stat(self.io);
-
-        // std.debug.print("{}", .{stats});
-
         var dirIterator = dir.iterate();
 
         while (try dirIterator.next(self.io)) |entry| {
-            // std.debug.print("{s}\n", .{entry.name});
-
             const owned_entry: OwnedEntry = .{
                 .name = try self.allocator.dupe(u8, entry.name),
                 .kind = entry.kind,
@@ -68,7 +62,7 @@ pub const PrintDirectoryContents = struct {
 
             try self.entries.append(self.allocator, owned_entry);
         }
-        // std.debug.print("\n", .{});
+
         self.sortEntries();
         try self.extractVisible();
         if (self.config.long) {
