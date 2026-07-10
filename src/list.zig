@@ -86,7 +86,7 @@ pub const PrintDirectoryContents = struct {
             comparatorFn,
         );
     }
-    pub fn extractVisible(self: *PrintDirectoryContents) !void {
+    fn extractVisible(self: *PrintDirectoryContents) !void {
         for (self.entries.items) |*entry| {
             if (!self.config.all and isHidden(entry.name))
                 continue;
