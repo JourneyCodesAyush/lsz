@@ -117,14 +117,46 @@ pub const PrintDirectoryContents = struct {
         }
     }
 
+    fn numDigits(n: usize) usize {
+        var v: usize = n;
+        var count: usize = 0;
+        while (v >= 10) : (v /= 10) {
+            count += 1;
+        }
+        return count;
+    }
+
     fn printEntriesLong(self: *PrintDirectoryContents) !void {
         var dir = try std.Io.Dir.cwd().openDir(self.io, self.root, .{ .iterate = true });
         defer dir.close(self.io);
 
-        for (self.visible.items) |entry| {
-            const stat = try std.Io.Dir.statFile(dir, self.io, entry.name, .{});
-            try self.formatPermissions(entry, stat);
+        // Pass 1: stat everything once, cache results, compute column widths
+        var stats = try self.allocator.alloc(std.Io.File.Stat, self.visible.items.len);
+        defer self.allocator.free(stats);
+
+        var max_nlink_width: usize = 1;
+        var max_size_width: usize = 1;
+
+        for (self.visible.items, 0..) |entry, i| {
+            stats[i] = try std.Io.Dir.statFile(dir, self.io, entry.name, .{});
+            max_nlink_width = @max(max_nlink_width, numDigits(stats[i].nlink));
+            max_size_width = @max(max_size_width, numDigits(stats[i].size));
+        }
+
+        for (self.visible.items, 0..) |entry, i| {
+            try self.formatPermissions(entry, stats[i]);
             try self.writer.writeByte(' ');
+
+            const nlink_digits = numDigits(stats[i].nlink);
+            for (0..max_nlink_width - nlink_digits) |_| try self.writer.writeByte(' ');
+            try self.writer.print("{d}", .{stats[i].nlink});
+            try self.writer.writeByte(' ');
+
+            const size_digits = numDigits(stats[i].size);
+            for (0..max_size_width - size_digits) |_| try self.writer.writeByte(' ');
+            try self.writer.print("{d}", .{stats[i].size});
+            try self.writer.writeByte(' ');
+
             try self.writer.writeAll(entry.name);
             try self.writer.writeByte('\n');
         }
