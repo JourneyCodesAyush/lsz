@@ -1,6 +1,15 @@
+//! Platform-specific utilities for `lsz`: terminal width detection and
+//! rata-die date conversion (used by `-l`'s mtime column).
+
 const std = @import("std");
 const builtin = @import("builtin");
 
+/// Returns the current terminal width in columns, for grid-layout sizing.
+/// Falls back to 80 on platforms without a native width query implemented
+/// (currently everything except Linux — macOS is deliberately deferred
+/// until ioctl behavior can be verified there, and native Windows console
+/// APIs aren't attempted since Zig 0.16 stripped the kernel32 wrappers
+/// this would have relied on).
 pub fn getTerminalSize(handle: std.Io.File.Handle) !usize {
     // TODO: implement OS based terminal width
     switch (builtin.os.tag) {
@@ -9,6 +18,8 @@ pub fn getTerminalSize(handle: std.Io.File.Handle) !usize {
     }
 }
 
+/// Queries terminal column width on Linux via `ioctl(TIOCGWINSZ)`.
+/// Returns 80 if the ioctl call fails (e.g. `handle` isn't a real tty).
 fn getTerminalWidthLinux(handle: std.Io.File.Handle) usize {
     var winsize = std.mem.zeroes(std.posix.winsize);
     if (std.c.ioctl(handle, std.c.T.IOCGWINSZ, @intFromPtr(&winsize)) == 0) {
@@ -18,11 +29,16 @@ fn getTerminalWidthLinux(handle: std.Io.File.Handle) usize {
     return 80;
 }
 
+/// Three-letter month abbreviations, indexed 0 (Jan) through 11 (Dec) —
+/// i.e. `month_names[date.month - 1]` for a 1-indexed `Date.month`.
 pub const month_names = [_][]const u8{ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
+/// A calendar date, as produced by `rdToDate`.
 pub const Date = struct {
     year: i32 = 0,
+    /// 1-indexed: 1 = January, 12 = December.
     month: u32 = 0,
+    /// 1-indexed day of month.
     day: u32 = 0,
 };
 
@@ -32,6 +48,13 @@ const S: u32 = 82;
 const K: u32 = 719468 + 146097 * S;
 const L: u32 = 400 * S;
 
+/// Converts a day count relative to the Unix epoch (1970-01-01 = day 0)
+/// into a proleptic Gregorian calendar date. Handles negative day counts
+/// (pre-1970 dates) correctly via the wrapping arithmetic in the
+/// Neri/Schneider algorithm.
+///
+/// Used by `list.zig`'s `formatMTime` to render `Stat.mtime` as a
+/// human-readable date for `-l` output.
 pub fn rdToDate(N_U: i32) Date {
     const N: u32 = @as(u32, @bitCast(N_U)) +% K;
 
