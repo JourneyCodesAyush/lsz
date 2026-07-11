@@ -1,7 +1,7 @@
 # lsz
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-active%20development-2ea44f?style=for-the-badge" alt="Active Development">
+  <img src="https://img.shields.io/badge/status-dormant-inactive?style=for-the-badge" alt="Dormant">
 </p>
 
 ![Zig](https://img.shields.io/badge/Zig-0.16.0-orange)
