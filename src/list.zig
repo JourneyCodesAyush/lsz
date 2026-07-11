@@ -1,6 +1,10 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+const dateutil = @import("utils.zig");
+const month_names = @import("utils.zig").month_names;
+const Date = @import("utils.zig").Date;
+
 pub const OutputMode = enum { pipe, terminal };
 pub const Config = struct { all: bool, long: bool, output_mode: OutputMode, width: usize };
 
@@ -117,6 +121,26 @@ pub const PrintDirectoryContents = struct {
         }
     }
 
+    fn formatMTime(self: *PrintDirectoryContents, mtime: std.Io.Timestamp, now_secs: i64) !void {
+        const secs: i64 = @intCast(@divFloor(mtime.nanoseconds, std.time.ns_per_s));
+        const epoch_day: i32 = @intCast(@divFloor(secs, 86_400));
+        const day_secs: u64 = @intCast(@mod(secs, 86_400));
+
+        const date = dateutil.rdToDate(epoch_day);
+        const hour = day_secs / 3600;
+        const minute = (day_secs % 3600) / 60;
+
+        const six_months_sec: i64 = 15_778_476;
+        const age = now_secs - secs;
+        const recent = age < six_months_sec and age > -six_months_sec;
+
+        if (recent) {
+            try self.writer.print("{s} {d:>2} {d:0>2}:{d:0>2}", .{ month_names[date.month - 1], date.day, hour, minute });
+        } else {
+            try self.writer.print("{s} {d:>2}  {d}", .{ month_names[date.month - 1], date.day, date.year });
+        }
+    }
+
     fn numDigits(n: usize) usize {
         var v: usize = n;
         var count: usize = 0;
@@ -143,6 +167,8 @@ pub const PrintDirectoryContents = struct {
             max_size_width = @max(max_size_width, numDigits(stats[i].size));
         }
 
+        const now_secs = std.Io.Clock.now(.awake, self.io).toSeconds();
+
         for (self.visible.items, 0..) |entry, i| {
             try self.formatPermissions(entry, stats[i]);
             try self.writer.writeByte(' ');
@@ -155,6 +181,9 @@ pub const PrintDirectoryContents = struct {
             const size_digits = numDigits(stats[i].size);
             for (0..max_size_width - size_digits) |_| try self.writer.writeByte(' ');
             try self.writer.print("{d}", .{stats[i].size});
+            try self.writer.writeByte(' ');
+
+            try self.formatMTime(stats[i].mtime, now_secs);
             try self.writer.writeByte(' ');
 
             try self.writer.writeAll(entry.name);
